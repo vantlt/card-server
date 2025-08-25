@@ -10,17 +10,23 @@ const PORT = process.env.PORT || 3000;
 // === Cấu hình CORS ===
 // Cho phép request từ trang Wix của bạn
 const corsOptions = {
-  origin: 'https://www.your-wix-site.com' // <<< THAY BẰNG DOMAIN WIX CỦA BẠN
+  origin: 'https://daihoihsvviii.wixsite.com' // Đã cập nhật địa chỉ Wix của bạn
 };
 app.use(cors(corsOptions));
 
 // Middleware để đọc JSON body
 app.use(express.json({ limit: '10mb' })); // Tăng giới hạn để chứa ảnh base64
 
-// Tạo thư mục 'downloads' nếu chưa có
-const downloadsDir = path.join(__dirname, 'downloads');
+// Route trang chủ để kiểm tra server có hoạt động không
+app.get('/', (req, res) => {
+  res.send('Server is running and ready to receive requests!');
+});
+
+
+// Tạo thư mục 'downloads' nếu chưa có (Vercel sẽ xử lý việc này trong môi trường tạm thời)
+const downloadsDir = path.join('/tmp', 'downloads');
 if (!fs.existsSync(downloadsDir)) {
-  fs.mkdirSync(downloadsDir);
+  fs.mkdirSync(downloadsDir, { recursive: true });
 }
 
 // Endpoint để nhận base64 và tạo link download
@@ -36,7 +42,7 @@ app.post('/generate-download', (req, res) => {
     const uniqueId = uuidv4();
     
     // Tạo tên file an toàn
-    const safeName = name ? name.replace(/\s+/g, '-') : 'dai-bieu';
+    const safeName = name ? name.replace(/[^a-z0-9]/gi, '-').toLowerCase() : 'dai-bieu';
     const filename = `${safeName}-${uniqueId}.png`;
     const filePath = path.join(downloadsDir, filename);
 
@@ -75,7 +81,7 @@ app.get('/download/:filename', (req, res) => {
       // File đã được gửi đi, không cần làm gì thêm
     });
   } else {
-    res.status(404).send('Không tìm thấy file hoặc file đã hết hạn.');
+    res.status(404).send('Không tìm thấy file hoặc file đã hết hạn. Vui lòng thử lại.');
   }
 });
 
