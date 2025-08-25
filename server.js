@@ -4,36 +4,24 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// === Cấu hình CORS an toàn cho sản phẩm ===
-const allowedOrigins = [
-  'https://daihoihsvviii.wixsite.com', // Trang Wix chính thức
-  'https://app.onecompiler.com',      // Trang bạn dùng để test
-  'null' // Cho phép test trực tiếp từ file HTML mở trên máy
-];
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-};
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); 
+// Middleware để đọc dữ liệu từ form (quan trọng!)
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware để đọc JSON body
-app.use(express.json({ limit: '10mb' }));
+// Không cần cors() vì form submission không bị kiểm tra CORS giống như fetch
+// Nhưng chúng ta cứ để đó phòng trường hợp cần gỡ lỗi sau này
+app.use(cors());
 
 // Route trang chủ để kiểm tra
 app.get('/', (req, res) => {
-  res.send('Server is running and ready for direct download generation!');
+  res.send('Server is running and ready for form submission downloads!');
 });
 
-// Endpoint duy nhất: Nhận base64 và trả về file ảnh trực tiếp
-app.post('/generate-download', (req, res) => {
+// Endpoint duy nhất: Nhận dữ liệu từ form và trả về file ảnh
+app.post('/generate-download-from-form', (req, res) => {
   try {
-    const { imageData, name } = req.body;
+    const { imageData } = req.body; // Lấy dữ liệu từ input có name="imageData"
+    const name = req.body.name || 'dai-bieu'; // Lấy tên từ input có name="name"
+
     if (!imageData) {
       return res.status(400).send('Không tìm thấy dữ liệu ảnh.');
     }
@@ -43,7 +31,7 @@ app.post('/generate-download', (req, res) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
     // Tạo tên file
-    const safeName = name ? name.replace(/[^a-z0-9]/gi, '-').toLowerCase() : 'dai-bieu';
+    const safeName = name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
     const filename = `${safeName}-${uuidv4().substring(0, 8)}.png`;
     
     // Thiết lập headers để trình duyệt hiểu đây là một file cần tải xuống
