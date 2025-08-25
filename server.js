@@ -4,26 +4,26 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// Middleware để đọc dữ liệu từ form
+// Middleware để đọc dữ liệu từ form (urlencoded)
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware CORS
+// Middleware CORS - Cho phép mọi yêu cầu để đảm bảo không bị chặn
 app.use(cors());
 app.options('*', cors()); 
 
-// Route trang chủ để kiểm tra
+// Route trang chủ để kiểm tra server có hoạt động không
 app.get('/', (req, res) => {
-  res.send('Server is running in Vercel-optimized mode!');
+  res.send('Card Generator Server is ready!');
 });
 
-// Endpoint duy nhất
-app.post('/generate-download-from-form', (req, res) => {
+// Endpoint duy nhất để nhận dữ liệu từ form và trả về file ảnh
+app.post('/generate-image', (req, res) => {
   try {
     const imageData = req.body.imageData; 
     const name = req.body.name || 'dai-bieu';
 
     if (!imageData) {
-      return res.status(400).send('Lỗi: Server không nhận được dữ liệu ảnh từ form.');
+      return res.status(400).send('Lỗi: Server không nhận được dữ liệu ảnh.');
     }
     
     // Tạo buffer ảnh từ base64
@@ -34,7 +34,7 @@ app.post('/generate-download-from-form', (req, res) => {
     const safeName = name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
     const filename = `${safeName}-${uuidv4().substring(0, 8)}.png`;
     
-    // Thiết lập headers
+    // Thiết lập headers để trình duyệt hiểu đây là một file cần tải xuống
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
     
@@ -42,12 +42,10 @@ app.post('/generate-download-from-form', (req, res) => {
     res.send(imageBuffer);
 
   } catch (error) {
-    console.error('SERVER CRITICAL ERROR:', error);
-    res.status(500).send('Đã có lỗi nghiêm trọng xảy ra trên server.');
+    console.error('SERVER ERROR:', error);
+    res.status(500).send('Đã có lỗi xảy ra trên server.');
   }
 });
 
-// =========================================================================
-// === THAY ĐỔI QUAN TRỌNG: Xuất app để Vercel tự quản lý vòng đời server ===
+// Xuất app để Vercel có thể sử dụng (Cách làm chuẩn)
 module.exports = app;
-// =========================================================================
