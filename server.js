@@ -1,51 +1,60 @@
 const express = require('express');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// Middleware để đọc dữ liệu từ form (urlencoded)
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Middleware để đọc dữ liệu JSON
+app.use(express.json({ limit: '10mb' }));
 
-// Middleware CORS - Cho phép mọi yêu cầu để đảm bảo không bị chặn
+// Middleware CORS
 app.use(cors());
 app.options('*', cors()); 
 
-// Route trang chủ để kiểm tra server có hoạt động không
+// Route trang chủ để kiểm tra
 app.get('/', (req, res) => {
-  res.send('Card Generator Server is ready!');
+  res.send('Card Generator Server with Imgur is ready!');
 });
 
-// Endpoint duy nhất để nhận dữ liệu từ form và trả về file ảnh
-app.post('/generate-image', (req, res) => {
+// Endpoint duy nhất
+app.post('/upload-and-get-link', async (req, res) => {
   try {
-    const imageData = req.body.imageData; 
-    const name = req.body.name || 'dai-bieu';
-
+    const { imageData } = req.body;
     if (!imageData) {
-      return res.status(400).send('Lỗi: Server không nhận được dữ liệu ảnh.');
+      return res.status(400).json({ error: 'Không tìm thấy dữ liệu ảnh.' });
     }
-    
-    // Tạo buffer ảnh từ base64
+
     const base64Data = imageData.replace(/^data:image\/png;base64,/, "");
-    const imageBuffer = Buffer.from(base64Data, 'base64');
     
-    // Tạo tên file
-    const safeName = name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-    const filename = `${safeName}-${uuidv4().substring(0, 8)}.png`;
-    
-    // Thiết lập headers để trình duyệt hiểu đây là một file cần tải xuống
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
-    
-    // Gửi dữ liệu ảnh về cho client
-    res.send(imageBuffer);
+    // Client ID công khai của Imgur - không cần giữ bí mật
+    const IMGUR_CLIENT_ID = 'e18bca875424527';
+
+    // Gửi yêu cầu đến API của Imgur
+    const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Client-ID ${IMGUR_CLIENT_ID}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: base64Data,
+        type: 'base64',
+      }),
+    });
+
+    const imgurData = await imgurResponse.json();
+
+    if (!imgurData.success) {
+      throw new Error('Tải ảnh lên Imgur thất bại.');
+    }
+
+    // Trả về link ảnh từ Imgur
+    res.json({ imageUrl: imgurData.data.link });
 
   } catch (error) {
     console.error('SERVER ERROR:', error);
-    res.status(500).send('Đã có lỗi xảy ra trên server.');
+    res.status(500).json({ error: 'Đã có lỗi xảy ra trên server.' });
   }
 });
 
-// Xuất app để Vercel có thể sử dụng (Cách làm chuẩn)
+// Xuất app để Vercel sử dụng
 module.exports = app;
