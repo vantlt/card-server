@@ -1,7 +1,7 @@
 {
-  "name": "card-server",
+  "name": "card-server-fresh-start",
   "version": "1.0.0",
-  "description": "Server to handle card image downloads",
+  "description": "A reliable server for card image downloads",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
