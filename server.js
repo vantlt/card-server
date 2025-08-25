@@ -4,26 +4,29 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// Middleware để đọc dữ liệu từ form (quan trọng!)
+// ======================================================================
+// === THAY ĐỔI QUAN TRỌNG: Dùng express.urlencoded để đọc dữ liệu form ===
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// ======================================================================
 
-// Không cần cors() vì form submission không bị kiểm tra CORS giống như fetch
-// Nhưng chúng ta cứ để đó phòng trường hợp cần gỡ lỗi sau này
+// Dùng cors() để tránh mọi vấn đề tiềm ẩn
 app.use(cors());
+app.options('*', cors()); 
 
 // Route trang chủ để kiểm tra
 app.get('/', (req, res) => {
-  res.send('Server is running and ready for form submission downloads!');
+  res.send('Server is running and correctly configured for form data!');
 });
 
 // Endpoint duy nhất: Nhận dữ liệu từ form và trả về file ảnh
 app.post('/generate-download-from-form', (req, res) => {
   try {
-    const { imageData } = req.body; // Lấy dữ liệu từ input có name="imageData"
-    const name = req.body.name || 'dai-bieu'; // Lấy tên từ input có name="name"
+    // Bây giờ server đã có thể đọc req.body từ form
+    const imageData = req.body.imageData; 
+    const name = req.body.name || 'dai-bieu';
 
     if (!imageData) {
-      return res.status(400).send('Không tìm thấy dữ liệu ảnh.');
+      return res.status(400).send('Lỗi: Server không nhận được dữ liệu ảnh từ form.');
     }
     
     // Tạo buffer ảnh từ base64
@@ -42,8 +45,8 @@ app.post('/generate-download-from-form', (req, res) => {
     res.send(imageBuffer);
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Lỗi xử lý ảnh phía server.');
+    console.error('SERVER ERROR:', error);
+    res.status(500).send('Đã có lỗi nghiêm trọng xảy ra trên server.');
   }
 });
 
