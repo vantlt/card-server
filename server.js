@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const fetch = require('node-fetch'); // <<< DÒNG MÃ QUAN TRỌNG NHẤT
 
 const app = express();
 
@@ -44,6 +45,8 @@ app.post('/upload-and-get-link', async (req, res) => {
     const imgurData = await imgurResponse.json();
 
     if (!imgurData.success) {
+      // Ghi lại lỗi chi tiết từ Imgur để dễ gỡ lỗi
+      console.error('Imgur API Error:', imgurData.data.error);
       throw new Error('Tải ảnh lên Imgur thất bại.');
     }
 
