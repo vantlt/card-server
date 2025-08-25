@@ -8,11 +8,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // === Cấu hình CORS ===
-// Cho phép request từ trang Wix của bạn
+// Danh sách các trang web được phép truy cập vào server
+const allowedOrigins = [
+  'https://daihoihsvviii.wixsite.com', // Trang Wix chính thức
+  'https://app.onecompiler.com'          // Trang bạn dùng để test
+];
+
 const corsOptions = {
-  origin: 'https://daihoihsvviii.wixsite.com' // Đã cập nhật địa chỉ Wix của bạn
+  origin: function (origin, callback) {
+    // Cho phép các request không có origin (như Postman, app di động) hoặc các origin trong danh sách
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 };
+
 app.use(cors(corsOptions));
+
 
 // Middleware để đọc JSON body
 app.use(express.json({ limit: '10mb' })); // Tăng giới hạn để chứa ảnh base64
@@ -37,27 +51,22 @@ app.post('/generate-download', (req, res) => {
       return res.status(400).json({ error: 'Không tìm thấy dữ liệu ảnh.' });
     }
 
-    // Tách phần header của base64
     const base64Data = imageData.replace(/^data:image\/png;base64,/, "");
     const uniqueId = uuidv4();
     
-    // Tạo tên file an toàn
     const safeName = name ? name.replace(/[^a-z0-9]/gi, '-').toLowerCase() : 'dai-bieu';
     const filename = `${safeName}-${uniqueId}.png`;
     const filePath = path.join(downloadsDir, filename);
 
-    // Ghi file vào server
     fs.writeFileSync(filePath, base64Data, 'base64');
 
-    // Tạo link để client tải về
     const downloadUrl = `${req.protocol}://${req.get('host')}/download/${filename}`;
 
-    // Lên lịch xóa file sau 1 thời gian ngắn (ví dụ 5 phút) để dọn dẹp
     setTimeout(() => {
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
-    }, 300000); // 5 phút = 300000 ms
+    }, 300000); 
 
     res.json({ downloadUrl });
 
@@ -73,12 +82,10 @@ app.get('/download/:filename', (req, res) => {
   const filePath = path.join(downloadsDir, filename);
 
   if (fs.existsSync(filePath)) {
-    // res.download() sẽ tự động set header Content-Disposition: attachment
     res.download(filePath, (err) => {
       if (err) {
         console.error("Lỗi khi gửi file:", err);
       }
-      // File đã được gửi đi, không cần làm gì thêm
     });
   } else {
     res.status(404).send('Không tìm thấy file hoặc file đã hết hạn. Vui lòng thử lại.');
