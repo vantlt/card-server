@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const { URLSearchParams } = require('url'); // Import công cụ để tạo Form Data
 
 const app = express();
 
-// Middleware để đọc dữ liệu JSON
+// Middleware để đọc dữ liệu JSON từ client (Wix)
 app.use(express.json({ limit: '10mb' }));
 
 // Middleware CORS
@@ -13,7 +14,7 @@ app.options('*', cors());
 
 // Route trang chủ để kiểm tra
 app.get('/', (req, res) => {
-  res.send('Card Generator Server with Imgur is ready!');
+  res.send('Card Generator Server with Imgur is ready! (Correct API format)');
 });
 
 // Endpoint duy nhất
@@ -26,29 +27,30 @@ app.post('/upload-and-get-link', async (req, res) => {
 
     const base64Data = imageData.replace(/^data:image\/png;base64,/, "");
     
-    // Client ID công khai của Imgur - không cần giữ bí mật
+    // Client ID công khai của Imgur
     const IMGUR_CLIENT_ID = 'e18bca875424527';
 
-    // Gửi yêu cầu đến API của Imgur
+    // ===================================================================
+    // === SỬA LỖI Ở ĐÂY: Tạo Form Data để gửi cho Imgur ===
+    // ===================================================================
+    const params = new URLSearchParams();
+    params.append('image', base64Data);
+    params.append('type', 'base64');
+
+    // Gửi yêu cầu đến API của Imgur với đúng định dạng
     const imgurResponse = await fetch('https://api.imgur.com/3/image', {
       method: 'POST',
       headers: {
         'Authorization': `Client-ID ${IMGUR_CLIENT_ID}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        image: base64Data,
-        type: 'base64',
-      }),
+      body: params, // Gửi dưới dạng Form Data
     });
+    // ===================================================================
 
-    const imgurData = await imgurResponse.json();
+    const imgurData = await imgurResponse.json(); // Bây giờ Imgur sẽ trả về JSON
 
     if (!imgurData.success) {
-      // =============================================================
-      // === SỬA LỖI Ở ĐÂY: Ghi lại toàn bộ đối tượng lỗi từ Imgur ===
-      console.error('Imgur API Error:', imgurData); 
-      // =============================================================
+      console.error('Imgur API Error:', imgurData);
       throw new Error('Tải ảnh lên Imgur thất bại.');
     }
 
